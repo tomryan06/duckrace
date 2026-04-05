@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#006064">
+
+    <title>Duck Race Pro</title>
+    <style>
+        :root {
+            --gold: #FFD700; --silver: #C0C0C0; --bronze: #CD7F32;
+            --primary: #00acc1; --dark: #006064; --light: #e0f7fa;
+        }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--light); padding: 15px; color: var(--dark); margin: 0; padding-top: 65px; -webkit-user-select: none; }
+        
+        header { position: fixed; top: 0; left: 0; right: 0; background: var(--dark); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; height: 55px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); margin-bottom: 20px; border: 1px solid #b2ebf2; }
+        h2 { margin-top: 0; color: #00838f; font-size: 1.1em; text-transform: uppercase; border-bottom: 2px solid var(--light); padding-bottom: 5px; margin-bottom: 15px; }
+        h3 { font-size: 0.9em; color: var(--primary); margin-top: 20px; text-transform: uppercase; }
+        
+        input, button { padding: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 10px; border: 1px solid #4dd0e1; font-size: 16px; }
+        button { background: var(--primary); color: white; font-weight: bold; border: none; cursor: pointer; -webkit-appearance: none; }
+        button:active { transform: scale(0.96); opacity: 0.9; }
+        
+        .download-btn { background: #2e7d32 !important; margin-bottom: 10px; }
+        .settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; padding: 20px; display: none; overflow-y: auto; }
+        .settings-card { background: white; padding: 20px; border-radius: 15px; max-width: 400px; margin: auto; }
+        
+        .duck-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 5px; }
+        .duck-row span { flex: 2; font-weight: bold; font-size: 0.9em; }
+        .duck-row input { flex: 1; margin: 0; padding: 8px; text-align: center; }
+        
+        .gold-text { color: var(--gold) !important; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-weight: 800; }
+        .silver-text { color: var(--silver) !important; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-weight: 800; }
+        .bronze-text { color: var(--bronze) !important; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-weight: 800; }
+        
+        .hidden { display: none !important; }
+        .btn-small { padding: 8px 12px; font-size: 0.75em; background: #0097a7; width: auto; margin: 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em; }
+        td { padding: 8px 5px; border-bottom: 1px solid #eee; }
+        .duck-pill { display: inline-block; background: #fff176; color: #5d4037; padding: 4px 10px; border-radius: 20px; font-weight: bold; margin: 4px; border: 1px solid #fbc02d; font-size: 0.8em; }
+        .owner-tag { color: #00acc1; font-weight: bold; font-size: 0.85em; }
+
+        #name-container { font-size: 2.8em; margin: 10px 0; line-height: 1.1; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+        .reveal-name-item { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <header id="main-header" class="hidden">
+        <span id="header-info" style="font-weight: bold; letter-spacing: 1px;">ROUND 1</span>
+        <button class="btn-small" onclick="toggleSettings()">⚙️ SETTINGS</button>
+    </header>
+
+    <div id="setup-screen" class="card">
+        <h2>New Duck Race</h2>
+        <label>Total Rounds:</label>
+        <input type="number" id="initRounds" value="3" inputmode="numeric">
+        <label>Player Count:</label>
+        <input type="number" id="initPlayers" value="15" inputmode="numeric">
+        <button onclick="startSetup()">Set Names & Rounds</button>
+        <div id="name-inputs"></div>
+    </div>
+
+    <div id="management-screen" class="card hidden">
+        <h2 id="mgmt-title">Duck Assignment</h2>
+        <div id="mgmt-list"></div>
+        <button onclick="goToRaces()">Lock Ducks & Start Round</button>
+    </div>
+
+    <div id="race-screen" class="card hidden">
+        <h2>Enter Results</h2>
+        <div id="finisher-fields"></div>
+        <button onclick="submitRound()">Submit Results</button>
+    </div>
+
+    <div id="reveal-screen" class="card hidden">
+        <div id="reveal-content" style="text-align: center; min-height: 350px; display: flex; flex-direction: column; justify-content: center;">
+            <p id="reveal-rank" style="font-size: 1.2em; margin-bottom: 0;">Calculating results...</p>
+            <div id="name-container"></div>
+            <p id="reveal-score" style="font-size: 1.3em; margin-top: 10px;"></p>
+        </div>
+        <button id="next-reveal-btn" onclick="nextReveal()">Next Placement</button>
+    </div>
+
+    <div id="summary-screen" class="card hidden">
+        <h2>Tournament Summary</h2>
+        <button class="download-btn" onclick="downloadCSV()">📊 Download Full Report (.csv)</button>
+        <table id="leaderboard-table">
+            <thead><tr><th>Rank</th><th>Player</th><th style="text-align:right">Pts</th></tr></thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+        <h2 style="margin-top:30px;">Detailed Round History</h2>
+        <div id="round-history-list"></div>
+        <h2 style="margin-top:30px;">Duck Hall of Fame</h2>
+        <div id="duck-stats-list"></div>
+        <button style="margin-top:40px; background:#e53935;" onclick="clearData()">Wipe & Start New Tournament</button>
+    </div>
+
+    <div id="settings-overlay" class="settings-overlay">
+        <div class="settings-card">
+            <h2>Game Settings</h2>
+            <label>Total Rounds:</label>
+            <input type="number" id="editRounds" inputmode="numeric">
+            <hr>
+            <h3>Edit Past Rounds</h3>
+            <div id="past-rounds-editor"></div>
+            <hr>
+            <label>Add New Player:</label>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="newPlayerName" placeholder="Name" autocomplete="off">
+                <button style="width:80px;" onclick="addPlayerMidGame()">Add</button>
+            </div>
+            <hr>
+            <button onclick="toggleSettings()">Close Settings</button>
+            <button style="background:#ffcdd2; color:#b71c1c; margin-top:20px;" onclick="clearData()">Reset App</button>
+        </div>
+    </div>
+
+    <div id="editor-overlay" class="settings-overlay">
+        <div class="settings-card">
+            <h2 id="edit-round-title">Edit Round</h2>
+            <div id="edit-round-fields"></div>
+            <button style="background:#2e7d32" onclick="saveEditedRound()">Save Changes</button>
+            <button style="background:#455a64" onclick="closeEditor()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let state = { players: [], currentRound: 1, totalRounds: 3, phase: 'setup', duckStats: {}, roundHistory: [] };
+        const STORAGE_KEY = 'duckRaceStandaloneProV1';
+
+        window.onload = () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) { state = JSON.parse(saved); resumeGame(); }
+        };
+
+        function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+        function toggleSettings() {
+            const overlay = document.getElementById('settings-overlay');
+            const isShowing = overlay.style.display === 'block';
+            overlay.style.display = isShowing ? 'none' : 'block';
+            if(!isShowing) {
+                document.getElementById('editRounds').value = state.totalRounds;
+                renderPastRoundsList();
+            }
+        }
+
+        function renderPastRoundsList() {
+            const container = document.getElementById('past-rounds-editor');
+            if(state.roundHistory.length === 0) {
+                container.innerHTML = "<p style='font-size:0.8em; color:grey'>No rounds completed yet.</p>";
+                return;
+            }
+            container.innerHTML = state.roundHistory.map((rh, i) => 
+                `<button onclick="openRoundEditor(${i})" style="background:#0097a7; margin:4px 0;">Edit Round ${rh.round} Placements</button>`
+            ).join('');
+        }
+
+        let currentlyEditingIdx = null;
+        function openRoundEditor(idx) {
+            currentlyEditingIdx = idx;
+            const rh = state.roundHistory[idx];
+            document.getElementById('edit-round-title').innerText = `Edit Round ${rh.round}`;
+            let html = "";
+            const labels = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+            for(let i=0; i<10; i++) {
+                const val = rh.data[i] ? rh.data[i].duck : "";
+                html += `<div class="duck-row"><span>${labels[i]}:</span> <input type="number" class="edit-f-duck" value="${val}" inputmode="numeric"></div>`;
+            }
+            document.getElementById('edit-round-fields').innerHTML = html;
+            document.getElementById('editor-overlay').style.display = 'block';
+        }
+
+        function saveEditedRound() {
+            const inputs = document.querySelectorAll('.edit-f-duck');
+            const pointsMap = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+            let newData = [];
+            inputs.forEach((input, i) => {
+                const duckNum = parseInt(input.value);
+                if(!isNaN(duckNum)) newData.push({ duck: duckNum, pts: pointsMap[i] });
+            });
+            state.roundHistory[currentlyEditingIdx].data = newData;
+            recalculateAllScores();
+            closeEditor();
+            save();
+            resumeGame();
+        }
+
+        function closeEditor() { document.getElementById('editor-overlay').style.display = 'none'; }
+
+        function recalculateAllScores() {
+            state.players.forEach(p => p.score = 0);
+            state.duckStats = {};
+            state.roundHistory.forEach(rh => {
+                rh.data.forEach(entry => {
+                    state.duckStats[entry.duck] = (state.duckStats[entry.duck] || 0) + entry.pts;
+                    rh.snapshots.forEach((snapPlayer, pIdx) => {
+                        if (snapPlayer.ducks.includes(entry.duck)) {
+                            state.players[pIdx].score += entry.pts;
+                        }
+                    });
+                });
+            });
+        }
+
+        function clearData() {
+            if(confirm("Wipe everything and start over?")) { 
+                localStorage.removeItem(STORAGE_KEY); 
+                state = { players: [], currentRound: 1, totalRounds: 3, phase: 'setup', duckStats: {}, roundHistory: [] };
+                location.reload(); 
+            }
+        }
+
+        function resumeGame() {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.getElementById('main-header').classList.remove('hidden');
+            document.getElementById('header-info').innerText = `ROUND ${state.currentRound} / ${state.totalRounds}`;
+            if (state.phase === 'setup') {
+                document.getElementById('setup-screen').classList.remove('hidden');
+                document.getElementById('main-header').classList.add('hidden');
+            } else if (state.phase === 'management') {
+                document.getElementById('management-screen').classList.remove('hidden');
+                renderManagement();
+            } else if (state.phase === 'race') {
+                document.getElementById('race-screen').classList.remove('hidden');
+                renderFinisherFields();
+            } else if (state.phase === 'reveal') { startReveal(); }
+            else if (state.phase === 'summary') { renderSummary(); }
+        }
+
+        function startSetup() {
+            const count = document.getElementById('initPlayers').value;
+            state.totalRounds = parseInt(document.getElementById('initRounds').value);
+            let html = '<h3>Enter Player Names:</h3>';
+            for(let i=0; i<count; i++) html += `<input type="text" class="p-name" placeholder="Name ${i+1}" autocomplete="off">`;
+            html += `<button onclick="saveNames()">Save Names</button>`;
+            document.getElementById('name-inputs').innerHTML = html;
+        }
+
+        function saveNames() {
+            const inputs = document.querySelectorAll('.p-name');
+            state.players = [];
+            inputs.forEach(input => { if(input.value) state.players.push({ name: input.value, ducks: [null, null], score: 0 }); });
+            state.phase = 'management'; save(); resumeGame();
+        }
+
+        function renderManagement() {
+            document.getElementById('mgmt-title').innerText = `Round ${state.currentRound} Setup`;
+            let html = '';
+            state.players.forEach((p, i) => {
+                const d1 = (p.ducks[0] !== null) ? p.ducks[0] : '';
+                const d2 = (p.ducks[1] !== null) ? p.ducks[1] : '';
+                html += `<div class="duck-row"><span>${p.name}</span> 
+                    <input type="number" value="${d1}" onchange="updateDuck(${i}, 0, this.value)" inputmode="numeric">
+                    <input type="number" value="${d2}" onchange="updateDuck(${i}, 1, this.value)" inputmode="numeric">
+                </div>`;
+            });
+            document.getElementById('mgmt-list').innerHTML = html;
+        }
+
+        function updateDuck(pIdx, dIdx, val) { state.players[pIdx].ducks[dIdx] = val === "" ? null : parseInt(val); save(); }
+        function goToRaces() { state.phase = 'race'; save(); resumeGame(); }
+
+        function renderFinisherFields() {
+            let html = '';
+            const labels = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+            labels.forEach((label, i) => { 
+                html += `<div class="duck-row"><span>${label}:</span> <input type="number" class="f-duck" placeholder="Duck #" inputmode="numeric"></div>`; 
+            });
+            document.getElementById('finisher-fields').innerHTML = html;
+        }
+
+        function submitRound() {
+            const inputs = document.querySelectorAll('.f-duck');
+            const pointsMap = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+            let currentRoundData = [];
+            inputs.forEach((input, index) => {
+                const duckNum = parseInt(input.value);
+                if(!isNaN(duckNum)) currentRoundData.push({ duck: duckNum, pts: pointsMap[index] });
+            });
+            state.roundHistory.push({ round: state.currentRound, data: currentRoundData, snapshots: JSON.parse(JSON.stringify(state.players)) });
+            recalculateAllScores();
+            if(state.currentRound < state.totalRounds) { state.currentRound++; state.phase = 'management'; } 
+            else { state.phase = 'reveal'; }
+            save(); resumeGame();
+        }
+
+        let scoreGroups = []; let groupIndex = 0;
+        function startReveal() {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.getElementById('reveal-screen').classList.remove('hidden');
+            document.getElementById('main-header').classList.add('hidden');
+            let uniqueScoresAsc = [...new Set(state.players.map(p => p.score))].sort((a,b) => a-b);
+            let uniqueScoresDesc = [...uniqueScoresAsc].reverse();
+            scoreGroups = [];
+            uniqueScoresAsc.forEach(score => {
+                let group = state.players.filter(p => p.score === score);
+                scoreGroups.push({ players: group, rank: uniqueScoresDesc.indexOf(score) + 1, score: score, isJoint: group.length > 1 });
+            });
+            groupIndex = 0;
+            nextReveal();
+        }
+
+        function nextReveal() {
+            if(groupIndex < scoreGroups.length) {
+                const grp = scoreGroups[groupIndex];
+                const container = document.getElementById('name-container');
+                container.innerHTML = "";
+                document.getElementById('reveal-rank').innerText = (grp.isJoint ? "Joint " : "") + grp.rank + getOrdinal(grp.rank) + " Place:";
+                grp.players.forEach(p => {
+                    let div = document.createElement('div');
+                    div.className = 'reveal-name-item';
+                    if(grp.rank === 1) div.classList.add('gold-text');
+                    else if(grp.rank === 2) div.classList.add('silver-text');
+                    else if(grp.rank === 3) div.classList.add('bronze-text');
+                    div.innerText = p.name;
+                    container.appendChild(div);
+                });
+                document.getElementById('reveal-score').innerText = `${grp.score} Points Total`;
+                groupIndex++;
+                if(groupIndex === scoreGroups.length) document.getElementById('next-reveal-btn').innerText = "View Tournament Summary";
+            } else { state.phase = 'summary'; save(); renderSummary(); }
+        }
+
+        function renderSummary() {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.getElementById('summary-screen').classList.remove('hidden');
+            document.getElementById('main-header').classList.add('hidden');
+            const topDown = [...state.players].sort((a,b) => b.score - a.score);
+            let uniqueScoresDesc = [...new Set(topDown.map(p => p.score))].sort((a,b) => b-a);
+            document.getElementById('leaderboard-body').innerHTML = topDown.map(p => {
+                let rank = uniqueScoresDesc.indexOf(p.score) + 1;
+                return `<tr><td>${rank}${getOrdinal(rank)}</td><td>${p.name}${state.players.filter(p2=>p2.score===p.score).length > 1 ? ' (Joint)' : ''}</td><td style="text-align:right"><strong>${p.score}</strong></td></tr>`
+            }).join('');
+            let historyHtml = "";
+            state.roundHistory.forEach(rh => {
+                historyHtml += `<h3>Round ${rh.round}</h3><table><tbody>`;
+                rh.data.forEach((entry, idx) => {
+                    let owners = rh.snapshots.filter(p => p.ducks.includes(entry.duck)).map(p => p.name);
+                    historyHtml += `<tr><td>${idx+1}${getOrdinal(idx+1)}</td><td>#${entry.duck}</td><td><span class="owner-tag">${owners.join(', ') || 'Unclaimed'}</span></td></tr>`;
+                });
+                historyHtml += `</tbody></table>`;
+            });
+            document.getElementById('round-history-list').innerHTML = historyHtml;
+            const duckArr = Object.entries(state.duckStats).sort((a,b) => b[1] - a[1]);
+            document.getElementById('duck-stats-list').innerHTML = duckArr.slice(0, 10).map(d => `<div class="duck-pill">#${d[0]}: ${d[1]}pts</div>`).join('');
+        }
+
+        function downloadCSV() {
+            const topDown = [...state.players].sort((a,b) => b.score - a.score);
+            let uniqueScoresDesc = [...new Set(topDown.map(p => p.score))].sort((a,b) => b-a);
+            let csv = "DUCK RACE OFFICIAL TOURNAMENT REPORT\n\n";
+            csv += "FINAL LEADERBOARD (DENSE RANKING)\nRank,Player,Total Points\n";
+            topDown.forEach(p => { csv += `${uniqueScoresDesc.indexOf(p.score) + 1},"${p.name}",${p.score}\n`; });
+            csv += "\nDUCK CHANGE LOG (LOST DUCKS)\nRound,Player,Old Duck(s),New Duck(s)\n";
+            for (let r = 1; r < state.roundHistory.length; r++) {
+                let prev = state.roundHistory[r-1].snapshots;
+                let curr = state.roundHistory[r].snapshots;
+                curr.forEach((player, i) => {
+                    if (JSON.stringify(player.ducks) !== JSON.stringify(prev[i].ducks)) {
+                        csv += `Before Round ${r+1},"${player.name}","[${prev[i].ducks.join(' & ')}]","[${player.ducks.join(' & ')}]"\n`;
+                    }
+                });
+            }
+            csv += "\nFINAL DUCK ASSIGNMENTS\nPlayer,Duck 1,Duck 2\n";
+            state.players.forEach(p => { csv += `"${p.name}",${p.ducks[0] || 'None'},${p.ducks[1] || 'None'}\n`; });
+            csv += "\nFULL RACE STATS (ROUND BY ROUND)\nRound,Pos,Duck Number,Owner(s)\n";
+            state.roundHistory.forEach(rh => {
+                rh.data.forEach((entry, idx) => {
+                    let owners = rh.snapshots.filter(p => p.ducks.includes(entry.duck)).map(p => p.name);
+                    csv += `${rh.round},${idx+1},${entry.duck},"${owners.join(' & ') || 'Unclaimed'}"\n`;
+                });
+            });
+            csv += "\nBEST PERFORMING DUCKS (HALL OF FAME)\nDuck Number,Total Points Earned\n";
+            Object.entries(state.duckStats).sort((a,b) => b[1] - a[1]).forEach(d => { csv += `${d[0]},${d[1]}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Official_Duck_Race_Report.csv`);
+            a.click();
+        }
+
+        function getOrdinal(i) { if(i>10 && i<20) return 'th'; switch(i%10){case 1:return 'st';case 2:return 'nd';case 3:return 'rd';default:return 'th';} }
+        function addPlayerMidGame() {
+            const name = document.getElementById('newPlayerName').value;
+            if(!name) return;
+            state.players.push({ name: name, ducks: [null, null], score: 0 });
+            document.getElementById('newPlayerName').value = ''; save(); renderManagement();
+        }
+    </script>
+</body>
+</html>
