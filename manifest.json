@@ -1,7 +1,7 @@
 {
   "short_name": "DuckRace",
   "name": "Duck Race Pro",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#006064",
   "theme_color": "#006064",
@@ -9,8 +9,12 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2219/2219803.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2219/2219803.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ]
 }
