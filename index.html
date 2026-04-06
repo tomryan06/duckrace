@@ -11,13 +11,11 @@
 
     <title>Duck Race Pro</title>
     <style>
-        /* THE DOUBLE-WALL: Hard-disables pull-to-refresh gestures */
-        html, body { 
+        /* UPDATED SHIELD: Stops refresh but ALLOWS scrolling */
+        html { 
             overscroll-behavior-y: none; 
-            height: 100%;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
         }
 
         :root {
@@ -30,9 +28,12 @@
             background: var(--light); 
             padding: 15px; 
             color: var(--dark); 
-            padding-top: 70px; 
+            padding-top: 75px; /* Added a bit more space for the header */
+            margin: 0;
+            min-height: 100vh; /* Allows the body to expand */
             -webkit-user-select: none;
-            touch-action: pan-x pan-y; 
+            touch-action: pan-y; /* Specifically allows vertical scrolling */
+            overflow-y: auto;
         }
         
         header { position: fixed; top: 0; left: 0; right: 0; background: var(--dark); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; height: 55px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -148,7 +149,7 @@
             players: [], currentRound: 1, totalRounds: 3, phase: 'setup', 
             duckStats: {}, roundHistory: [], tempResults: [] 
         };
-        const STORAGE_KEY = 'duckRaceFinalResilientV3';
+        const STORAGE_KEY = 'duckRaceFinalResilientV4';
 
         window.onload = () => {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -242,6 +243,10 @@
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.getElementById('main-header').classList.remove('hidden');
             document.getElementById('header-info').innerText = `ROUND ${state.currentRound} / ${state.totalRounds}`;
+            
+            // MAGIC FIX: Force the page to scroll to top every time we change screens
+            window.scrollTo(0, 0);
+
             if (state.phase === 'setup') {
                 document.getElementById('setup-screen').classList.remove('hidden');
                 document.getElementById('main-header').classList.add('hidden');
@@ -347,7 +352,7 @@
                 });
                 document.getElementById('reveal-score').innerText = `${grp.score} Points Total`;
                 groupIndex++;
-                if(groupIndex === scoreGroups.length) document.getElementById('next-reveal-btn').innerText = "View Tournament Summary";
+                if(groupIndex === scoreGroups.length) document.getElementById('next-reveal-btn').innerText = "View Final Results";
             } else { state.phase = 'summary'; save(); renderSummary(); }
         }
 
@@ -378,10 +383,9 @@
         function downloadCSV() {
             const topDown = [...state.players].sort((a,b) => b.score - a.score);
             let uniqueScoresDesc = [...new Set(topDown.map(p => p.score))].sort((a,b) => b-a);
-            let csv = "DUCK RACE OFFICIAL TOURNAMENT REPORT\n\n";
-            csv += "FINAL LEADERBOARD (DENSE RANKING)\nRank,Player,Total Points\n";
+            let csv = "Rank,Player,Score\n";
             topDown.forEach(p => { csv += `${uniqueScoresDesc.indexOf(p.score) + 1},"${p.name}",${p.score}\n`; });
-            csv += "\nDUCK CHANGE LOG (LOST DUCKS)\nRound,Player,Old Duck(s),New Duck(s)\n";
+            csv += "\nDUCK CHANGE LOG\nRound,Player,Old,New\n";
             for (let r = 1; r < state.roundHistory.length; r++) {
                 let prev = state.roundHistory[r-1].snapshots;
                 let curr = state.roundHistory[r].snapshots;
@@ -391,20 +395,16 @@
                     }
                 });
             }
-            csv += "\nFINAL DUCK ASSIGNMENTS\nPlayer,Duck 1,Duck 2\n";
-            state.players.forEach(p => { csv += `"${p.name}",${p.ducks[0] || 'None'},${p.ducks[1] || 'None'}\n`; });
-            csv += "\nFULL RACE STATS (ROUND BY ROUND)\nRound,Pos,Duck Number,Owner(s)\n";
+            csv += "\nFULL RACE STATS\nRound,Pos,Duck,Owner\n";
             state.roundHistory.forEach(rh => {
                 rh.data.forEach((entry, idx) => {
                     let owners = rh.snapshots.filter(p => p.ducks.includes(entry.duck)).map(p => p.name);
                     csv += `${rh.round},${idx+1},${entry.duck},"${owners.join(' & ') || 'Unclaimed'}"\n`;
                 });
             });
-            csv += "\nBEST PERFORMING DUCKS (HALL OF FAME)\nDuck Number,Total Points Earned\n";
-            Object.entries(state.duckStats).sort((a,b) => b[1] - a[1]).forEach(d => { csv += `${d[0]},${d[1]}\n`; });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.setAttribute('href', url); a.setAttribute('download', `Official_Duck_Race_Report.csv`); a.click();
+            const a = document.createElement('a'); a.setAttribute('href', url); a.setAttribute('download', `Duck_Race_Report.csv`); a.click();
         }
 
         function getOrdinal(i) { if(i>10 && i<20) return 'th'; switch(i%10){case 1:return 'st';case 2:return 'nd';case 3:return 'rd';default:return 'th';} }
