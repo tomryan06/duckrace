@@ -7,14 +7,14 @@
   "theme_color": "#006064",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
-      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
