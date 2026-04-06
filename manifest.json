@@ -7,12 +7,12 @@
   "theme_color": "#006064",
   "icons": [
     {
-      "src": "https://github.com/tomryan06/duckrace/blob/8a9aa7647e07fb4041ed2b6c483bcdd9ab759af4/icon.png",
+      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://github.com/tomryan06/duckrace/blob/8a9aa7647e07fb4041ed2b6c483bcdd9ab759af4/icon.png",
+      "src": "https://raw.githubusercontent.com/tomryan06/duckrace/main/icon.png",
       "type": "image/png",
       "sizes": "512x512"
     }
