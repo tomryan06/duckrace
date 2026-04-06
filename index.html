@@ -14,7 +14,7 @@
         /* THE MODERN SHIELD: Stops pull-to-refresh without breaking the scroll */
         html { 
             overscroll-behavior-y: none; 
-            background: #006064; /* Matches header to look seamless */
+            background: #006064; 
         }
 
         :root {
@@ -27,13 +27,12 @@
             background: var(--light); 
             color: var(--dark); 
             margin: 0;
-            /* Padding ensures content is never hidden by fixed header or bottom browser bars */
             padding: 15px;
             padding-top: 90px; 
             padding-bottom: 120px; 
-            min-height: 101vh; /* Forces scroll logic to wake up without locking height */
+            min-height: 101vh; 
             -webkit-user-select: none;
-            touch-action: manipulation; /* Optimizes for taps and swipes */
+            touch-action: manipulation; 
         }
         
         header { 
@@ -164,7 +163,7 @@
             players: [], currentRound: 1, totalRounds: 3, phase: 'setup', 
             duckStats: {}, roundHistory: [], tempResults: [] 
         };
-        const STORAGE_KEY = 'duckRaceFinalResilientV6';
+        const STORAGE_KEY = 'duckRaceFinalResilientV7';
 
         window.onload = () => {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -257,8 +256,6 @@
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.getElementById('main-header').classList.remove('hidden');
             document.getElementById('header-info').innerText = `ROUND ${state.currentRound} / ${state.totalRounds}`;
-            
-            // CLEAN SCROLL RESET
             window.scrollTo({top: 0, behavior: 'auto'});
 
             if (state.phase === 'setup') {
@@ -366,7 +363,7 @@
                 });
                 document.getElementById('reveal-score').innerText = `${grp.score} Points Total`;
                 groupIndex++;
-                if(groupIndex === scoreGroups.length) document.getElementById('next-reveal-btn').innerText = "View Tournament Summary";
+                if(groupIndex === scoreGroups.length) document.getElementById('next-reveal-btn').innerText = "View Final Results";
             } else { state.phase = 'summary'; save(); renderSummary(); }
         }
 
@@ -397,11 +394,44 @@
         function downloadCSV() {
             const topDown = [...state.players].sort((a,b) => b.score - a.score);
             let uniqueScoresDesc = [...new Set(topDown.map(p => p.score))].sort((a,b) => b-a);
-            let csv = "Rank,Player,Score\n";
+            let csv = "DUCK RACE OFFICIAL TOURNAMENT REPORT\n\n";
+            
+            // 1. Final Leaderboard
+            csv += "FINAL LEADERBOARD (DENSE RANKING)\nRank,Player,Total Points\n";
             topDown.forEach(p => { csv += `${uniqueScoresDesc.indexOf(p.score) + 1},"${p.name}",${p.score}\n`; });
+            
+            // 2. Duck Changelog
+            csv += "\nDUCK CHANGE LOG (LOST DUCKS)\nRound,Player,Old Duck(s),New Duck(s)\n";
+            for (let r = 1; r < state.roundHistory.length; r++) {
+                let prev = state.roundHistory[r-1].snapshots;
+                let curr = state.roundHistory[r].snapshots;
+                curr.forEach((player, i) => {
+                    if (JSON.stringify(player.ducks) !== JSON.stringify(prev[i].ducks)) {
+                        csv += `Before Round ${r+1},"${player.name}","[${prev[i].ducks.join(' & ')}]","[${player.ducks.join(' & ')}]"\n`;
+                    }
+                });
+            }
+            
+            // 3. Final Assignments
+            csv += "\nFINAL DUCK ASSIGNMENTS\nPlayer,Duck 1,Duck 2\n";
+            state.players.forEach(p => { csv += `"${p.name}",${p.ducks[0] || 'None'},${p.ducks[1] || 'None'}\n`; });
+            
+            // 4. Full Race Stats
+            csv += "\nFULL RACE STATS (ROUND BY ROUND)\nRound,Pos,Duck Number,Owner(s)\n";
+            state.roundHistory.forEach(rh => {
+                rh.data.forEach((entry, idx) => {
+                    let owners = rh.snapshots.filter(p => p.ducks.includes(entry.duck)).map(p => p.name);
+                    csv += `${rh.round},${idx+1},${entry.duck},"${owners.join(' & ') || 'Unclaimed'}"\n`;
+                });
+            });
+            
+            // 5. Best Ducks
+            csv += "\nBEST PERFORMING DUCKS (HALL OF FAME)\nDuck Number,Total Points Earned\n";
+            Object.entries(state.duckStats).sort((a,b) => b[1] - a[1]).forEach(d => { csv += `${d[0]},${d[1]}\n`; });
+            
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.setAttribute('href', url); a.setAttribute('download', `Duck_Race_Report.csv`); a.click();
+            const a = document.createElement('a'); a.setAttribute('href', url); a.setAttribute('download', `Duck_Race_Full_Report.csv`); a.click();
         }
 
         function getOrdinal(i) { if(i>10 && i<20) return 'th'; switch(i%10){case 1:return 'st';case 2:return 'nd';case 3:return 'rd';default:return 'th';} }
